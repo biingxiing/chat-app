@@ -1,4 +1,5 @@
 enum ChatModel {
+  // OpenAI models
   Gpt4 = 'gpt-4',
   Gpt432k = 'gpt-4-32k-0314',
   Gpt40613 = 'gpt-4-0613',
@@ -6,6 +7,9 @@ enum ChatModel {
   Gpt4Vision = 'gpt-4-vision-preview',
   GptTurbo = 'gpt-3.5-turbo',
   GptTurbo16k = 'gpt-3.5-turbo-16k',
+  // DeepSeek models
+  DeepSeekChat = 'deepseek-chat',
+  DeepSeekReasoner = 'deepseek-reasoner',
 }
 
 export default ChatModel;

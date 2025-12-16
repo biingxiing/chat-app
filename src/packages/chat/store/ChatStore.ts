@@ -49,7 +49,7 @@ class ChatStore {
   }
 
   @action
-  async submitChatPrompt(prompt: string, imageUrls: ImageUrl[] = []) {
+  async submitChatPrompt(prompt: string, imageUrls: ImageUrl[] = [], model: string) {
     this.submittingPrompt = true;
 
     try {
@@ -108,7 +108,7 @@ class ChatStore {
           Accept: 'text/event-stream',
         },
         openWhenHidden: true,
-        body: JSON.stringify({ model: 'gpt-4-vision-preview', messages: messagesInput }),
+        body: JSON.stringify({ model: model, messages: messagesInput }),
         onopen: async (response) => {
           if (response.ok && response.headers.get('content-type') === EventStreamContentType) {
             runInAction(() => {
@@ -135,7 +135,7 @@ class ChatStore {
               throw new FatalError(parsedError.error);
             }
           }
-
+          console.log(msg.data);
           if (msg.data) {
             const parsedData = JSON.parse(msg.data) as StreamData;
             runInAction(() => {

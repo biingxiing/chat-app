@@ -17,11 +17,14 @@ import { observer } from 'mobx-react';
 import { useStores } from '../../../hooks/use-stores';
 import { v4 as uuidv4 } from 'uuid';
 
+import { Select } from 'antd';
+
 const Chat: React.FC = () => {
   const { chatStore } = useStores();
 
   const [prompt, setPrompt] = useState('');
   const [autoScroll, setAutoScroll] = useState(true);
+  const [model, setModel] = useState('deepseek-chat');
 
   const ref = useRef<HTMLDivElement>(null);
 
@@ -125,7 +128,7 @@ const Chat: React.FC = () => {
     if (!prompt?.length || chatStore.submittingPrompt) {
       return;
     }
-    chatStore.submitChatPrompt(prompt, chatStore.imageUrls);
+    chatStore.submitChatPrompt(prompt, chatStore.imageUrls, model);
     chatStore.clearImageUrls();
     setPrompt('');
   };
@@ -167,6 +170,15 @@ const Chat: React.FC = () => {
                 return true;
               }}
             />
+            <Select
+              className={styles.modelSelector}
+              onChange={(value) => setModel(value)}
+              value={model}
+              size="small"
+            >
+              <Select.Option value="deepseek-chat">DeepSeek Chat</Select.Option>
+              <Select.Option value="deepseek-reasoner">DeepSeek Reasoner</Select.Option>
+            </Select>
             <div className={styles.sendBtn}>
               {chatStore.submittingPrompt ? (
                 <WaitingAnimation />

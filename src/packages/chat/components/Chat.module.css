@@ -164,3 +164,9 @@
 .resetConversationBtn > .resetConversationIcon {
   width: 80%;
 }
+
+.modelSelector {
+  flex-shrink: 0;
+  width: 150px;
+  align-self: center;
+}

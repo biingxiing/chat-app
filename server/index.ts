@@ -1,14 +1,14 @@
 import cors from 'cors';
 import express from 'express';
 import router from './router';
-
+import bodyParser from 'body-parser';
 const app = express();
 
 const corsOptions = {
   origin: '*',
 };
 app.use(cors(corsOptions));
-app.use(express.json());
+app.use(express.json({limit: '50mb'}));
 
 app.use('/', router);
 

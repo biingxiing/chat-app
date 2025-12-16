@@ -6,9 +6,11 @@ import { Completion, CompletionCreateParamsStreaming } from 'openai/resources';
 import { encoding_for_model } from 'tiktoken';
 import { Response } from 'express';
 import { Stream } from 'openai/streaming';
+import { toKeyName } from 'is-hotkey';
 
 const openai = new OpenAI({
-  apiKey: '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',
+  baseURL: 'https://api.deepseek.com',
+  apiKey: 'sk-***',
 });
 
 const TEMPERATURE = 0;
@@ -29,13 +31,26 @@ function getMaxTokenFromModel(model: ChatModel) {
       return 4096;
     case ChatModel.GptTurbo16k:
       return 16384;
+    // DeepSeek models - 64K context window
+    case ChatModel.DeepSeekChat:
+    case ChatModel.DeepSeekReasoner:
+      return 65536;
     default:
       return 2049;
   }
 }
 
+function isDeepSeekModel(model: ChatModel) {
+  return model === ChatModel.DeepSeekChat || model === ChatModel.DeepSeekReasoner;
+}
+
 function getNumberOfTokens(text: string, model: ChatModel) {
   try {
+    // DeepSeek models don't have tiktoken support, use approximation
+    if (isDeepSeekModel(model)) {
+      // Approximate: ~4 characters per token for mixed content
+      return Math.ceil(text.length / 4);
+    }
     // tiktoken library forgot to add encoding for gpt-4-0613 so hacking for now
     if (model === ChatModel.Gpt40613) {
       model = ChatModel.Gpt4;
@@ -77,7 +92,7 @@ export class ChatService {
       }
 
       const openaiModelInput = {
-        model: input.model || ChatModel.GptTurbo,
+        model: input.model || ChatModel.DeepSeekChat,
         temperature: TEMPERATURE,
         max_tokens: maxTokens - TOKEN_COUNT_BUFFER,
       };
@@ -87,6 +102,8 @@ export class ChatService {
         ...openaiModelInput,
         messages: [{ role: 'user', content: prompt }],
       });
+
+      
       response = chatCompletion.choices[0].message?.content || '';
 
       return {
@@ -123,7 +140,7 @@ export class ChatService {
       throw new Error('Prompt or context is required.');
     }
 
-    const model = (input.model as ChatModel) || ChatModel.GptTurbo;
+    const model = (input.model as ChatModel) || ChatModel.DeepSeekChat;
 
     try {
       let messages = input.messages;
@@ -144,9 +161,15 @@ export class ChatService {
       }
 
       const numPromptTokens = getNumberOfTokens(text, model);
-      const maxTokens = [ChatModel.Gpt41106, ChatModel.Gpt4Vision].includes(model)
-        ? 4096
-        : parseInt((getMaxTokenFromModel(model) - numPromptTokens).toString());
+      let maxTokens: number;
+      if ([ChatModel.Gpt41106, ChatModel.Gpt4Vision].includes(model)) {
+        maxTokens = 4096;
+      } else if (isDeepSeekModel(model)) {
+        // DeepSeek models have 8K max output tokens
+        maxTokens = Math.min(8192, getMaxTokenFromModel(model) - numPromptTokens);
+      } else {
+        maxTokens = parseInt((getMaxTokenFromModel(model) - numPromptTokens).toString());
+      }
 
       if (maxTokens < 0) {
         throw new Error('Content is too long. Please shorten the content or try a higher model.');
@@ -166,9 +189,9 @@ export class ChatService {
       }
 
       for await (const token of await this.streamChatCompletion(chatCompletionRequest)) {
-        res.sse.push({ token });
+        res.sse.push({ text: token });
       }
-
+    
       res.sse.push({ success: true });
     } catch (err) {
       const error = err as any;
